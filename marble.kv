@@ -1,0 +1,52 @@
+# File name: marble.kv
+#:kivy 2.1.0
+<MojeTlacitko>
+	background_normal: 'images/button.png'
+	background_down: 'images/button_down.png'
+	#size_hint: .34, .2
+			
+<Pozadi>:
+	canvas:
+		Rectangle:
+			source: 'images/game.png'
+			pos: self.pos
+			size: self.size
+
+<ObrazovkaHry>:
+	id: obrazovka_hry
+	page: 0
+	border: 0
+	Pozadi:
+		orientation: 'vertical'
+		BoxLayout:
+			orientation: 'horizontal'
+			size_hint_y: 0.2
+			MojeTlacitko:
+				markup: True
+				text: '[size=32px][i][b]Start[/b][/i][/size]'
+				pos: root.x, root.top - self.height
+			Label:
+				canvas.before:
+					Rectangle:
+						source: 'images/display.png'
+						pos: self.pos
+						size: self.size
+				markup: True
+				text: '[size=32px][i][b]Výsledek[/b][/i][/size]'
+				pos: (root.right - self.width)/2, root.top - self.height - 13
+			MojeTlacitko:
+				markup: True
+				text: '[size=32px][i][b]Nastavení[/b][/i][/size]'
+				pos: root.right - self.width, root.top - self.height
+				on_press: obrazovka_hry.switch_to(1)
+		BoxLayout:
+			size_hint_y: 0.8
+			Label:
+				text: 'hra'
+	Pozadi:
+		orientation: 'horizontal'
+		MojeTlacitko:
+			text: 'R1'
+			size_hint: .3, .2
+			pos: 0, 0
+			on_press: obrazovka_hry.switch_to(0)
