@@ -1,29 +1,34 @@
 # File name: marble.kv
 #:kivy 2.1.0
-<MojeTlacitko>
+<MojeTlacitko@Button>
 	background_normal: 'images/button.png'
 	background_down: 'images/button_down.png'
-	#size_hint: .34, .2
-			
+	font_size: self.width/10 if self.width/10 < self.height/3 else self.height/3
+	
 <Pozadi>:
 	canvas:
+		Color:
+			rgba: 0, 0, 0, 1
+		Rectangle:
+			pos: self.pos
+			size: self.size
+		Color:
+			rgba: 1, 1, 1, 1
 		Rectangle:
 			source: 'images/game.png'
 			pos: self.pos
 			size: self.size
-
+			
 <ObrazovkaHry>:
-	id: obrazovka_hry
-	page: 0
-	border: 0
 	Pozadi:
 		orientation: 'vertical'
+		padding: int(self.width/25),int(self.height/25),int(self.width/25),int(self.height/25)
 		BoxLayout:
 			orientation: 'horizontal'
 			size_hint_y: 0.2
 			MojeTlacitko:
 				markup: True
-				text: '[size=32px][i][b]Start[/b][/i][/size]'
+				text: 'Začni hru'
 				pos: root.x, root.top - self.height
 			Label:
 				canvas.before:
@@ -32,21 +37,90 @@
 						pos: self.pos
 						size: self.size
 				markup: True
-				text: '[size=32px][i][b]Výsledek[/b][/i][/size]'
+				text: 'Výsledek'
 				pos: (root.right - self.width)/2, root.top - self.height - 13
 			MojeTlacitko:
 				markup: True
-				text: '[size=32px][i][b]Nastavení[/b][/i][/size]'
+				text: 'Nastavení'
 				pos: root.right - self.width, root.top - self.height
-				on_press: obrazovka_hry.switch_to(1)
+				on_press: root.manager.current = 'obrazovka_nastaveni'
 		BoxLayout:
 			size_hint_y: 0.8
 			Label:
 				text: 'hra'
+
+<ObrazovkaNastaveni>:
 	Pozadi:
-		orientation: 'horizontal'
-		MojeTlacitko:
-			text: 'R1'
-			size_hint: .3, .2
-			pos: 0, 0
-			on_press: obrazovka_hry.switch_to(0)
+		id: form_nastaveni
+		orientation: 'vertical'
+		GridLayout:
+			cols: 1+int(self.width/self.height)
+			padding: int(self.width/25),int(self.height/25),int(self.width/25),int(self.height/25)
+			
+			BoxLayout:
+				orientation: 'vertical'
+				Label:
+					text: 'Šířka hracího pole: ' + str(slider_1.value)
+				Slider:
+					id: slider_1
+					min: 5
+					max: 15
+					step: 1
+					value: 7
+					orientation: 'horizontal'
+			BoxLayout:
+				orientation: 'vertical'
+				Label:
+					text: 'Počet barev: ' + str(slider_2.value)
+				Slider:
+					id: slider_2
+					min: 3
+					max: 11
+					step: 1
+					value: 5
+					orientation: 'horizontal'
+			BoxLayout:
+				orientation: 'vertical'
+				Label:
+					text: 'Přírůst kuliček: ' + str(slider_3.value)
+				Slider:
+					id: slider_3
+					min: 3
+					max: 10
+					step: 1
+					value: 3
+					orientation: 'horizontal'
+			BoxLayout:
+				orientation: 'vertical'
+				Label:
+					text: 'Délka řady pro smazání: ' + str(slider_4.value)
+				Slider:
+					id: slider_4
+					min: 3
+					max: slider_1.value
+					step: 1
+					value: 5
+					orientation: 'horizontal'
+			BoxLayout:
+				padding: int(self.width/25),0,int(self.width/25),0
+				orientation: 'vertical'
+				Label:
+					text: 'Zisk za počet kuliček:'
+				TextInput:
+					size_hint: 1, None
+					height: self.minimum_height
+					multiline: False
+			BoxLayout:
+				orientation: 'vertical'
+				Label:
+					text: 'Jazyk:'
+				Label:
+					text: ''
+			MojeTlacitko:
+				id: btn_zpet
+				text: 'Zpět bez uložení'
+				on_press: root.manager.current = 'obrazovka_hry'
+			MojeTlacitko:
+				id: btn_uloz
+				text: 'Uložit a zavřít'
+				on_press: root.manager.current = 'obrazovka_hry'
