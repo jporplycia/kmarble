@@ -1,105 +1,110 @@
 # File name: marble.kv
 #:kivy 2.1.0
+#: import ScreenManager kivy.uix.screenmanager.ScreenManager
+#: import Screen kivy.uix.screenmanager.Screen
+#: import FadeTransition kivy.uix.screenmanager.FadeTransition
+#: import ObrazovkaHry screen
+#: import ObrazovkaNastaveni screen
+
+ScreenManager:
+    id: screen_manager
+    transition: FadeTransition()
+    ObrazovkaHry:
+        id: obrazovka_hry
+        name: 'ObrazovkaHry'
+        manager: 'obrazovka_hry'
+    ObrazovkaNastaveni:
+        id: obrazovka_nastaveni
+        name: 'ObrazovkaNastaveni'
+        manager: 'obrazovka_nastaveni'
+
 <MojeTlacitko@Button>
-	background_normal: 'images/button.png'
-	background_down: 'images/button_down.png'
+	background_normal: 'images/btn.png'
+	background_down: 'images/btn_dwn.png'
+	background_disabled_normal: 'images/btn.png'
 	font_size: self.width/10 if self.width/10 < self.height/3 else self.height/3
 	
-<Pozadi>:
+<Pozadi@BoxLayout>:
 	canvas:
 		Color:
-			rgba: 0, 0, 0, 1
+			rgba: 0.28, 0.42, 0.90, 1
 		Rectangle:
-			pos: self.pos
-			size: self.size
-		Color:
-			rgba: 1, 1, 1, 1
-		Rectangle:
-			source: 'images/game.png'
 			pos: self.pos
 			size: self.size
 			
-<ObrazovkaHry>:
+<ObrazovkaHry@Screen>:
 	Pozadi:
-		orientation: 'vertical'
+		orientation: 'vertical'  #if root.width < root.height else 'horizontal'
 		padding: int(self.width/25),int(self.height/25),int(self.width/25),int(self.height/25)
 		BoxLayout:
-			orientation: 'horizontal'
-			size_hint_y: 0.2
+			orientation: 'horizontal'  #if root.width < root.height else 'vertical'
+			size_hint_y: root.width/root.height/5
 			MojeTlacitko:
+				id: btn_start
 				markup: True
 				text: 'Začni hru'
-				pos: root.x, root.top - self.height
-			Label:
-				canvas.before:
-					Rectangle:
-						source: 'images/display.png'
-						pos: self.pos
-						size: self.size
-				markup: True
+				on_press: app.start_hry()
+			Button:
+				id: btn_vysledky
+				background_normal: 'images/btn.png'
+				background_down: 'images/btn.png'
+				font_size: self.width/10 if self.width/10 < self.height/3 else self.height/3
 				text: 'Výsledek'
-				pos: (root.right - self.width)/2, root.top - self.height - 13
 			MojeTlacitko:
+				id: btn_nastaveni
 				markup: True
 				text: 'Nastavení'
-				pos: root.right - self.width, root.top - self.height
-				on_press: root.manager.current = 'obrazovka_nastaveni'
+				on_press: app.stisk_nastaveni()
 		BoxLayout:
-			size_hint_y: 0.8
-			Label:
-				text: 'hra'
+			id: herni_pole
 
-<ObrazovkaNastaveni>:
+<ObrazovkaNastaveni@Screen>:
 	Pozadi:
-		id: form_nastaveni
 		orientation: 'vertical'
 		GridLayout:
+			id: mrizka
 			cols: 1+int(self.width/self.height)
 			padding: int(self.width/25),int(self.height/25),int(self.width/25),int(self.height/25)
 			
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Šířka hracího pole: ' + str(slider_1.value)
+					text: 'Šířka hracího pole: ' + str(sld_sirka_matice.value)
 				Slider:
-					id: slider_1
+					id: sld_sirka_matice
 					min: 5
 					max: 15
 					step: 1
-					value: 7
 					orientation: 'horizontal'
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Počet barev: ' + str(slider_2.value)
+					text: 'Počet barev: ' + str(sld_pocet_barev.value)
 				Slider:
-					id: slider_2
+					id: sld_pocet_barev
 					min: 3
 					max: 11
 					step: 1
-					value: 5
 					orientation: 'horizontal'
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Přírůst kuliček: ' + str(slider_3.value)
+					text: 'Přírůstek kuliček: ' + str(sld_prirustek.value)
 				Slider:
-					id: slider_3
+					id: sld_prirustek
 					min: 3
 					max: 10
 					step: 1
-					value: 3
 					orientation: 'horizontal'
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Délka řady pro smazání: ' + str(slider_4.value)
+					text: 'Délka řady pro smazání: ' + str(sld_min_rada.value)
 				Slider:
-					id: slider_4
+					id: sld_min_rada
 					min: 3
-					max: slider_1.value
+					max: sld_sirka_matice.value
 					step: 1
-					value: 5
 					orientation: 'horizontal'
 			BoxLayout:
 				padding: int(self.width/25),0,int(self.width/25),0
@@ -107,6 +112,7 @@
 				Label:
 					text: 'Zisk za počet kuliček:'
 				TextInput:
+					id: ti_zisk
 					size_hint: 1, None
 					height: self.minimum_height
 					multiline: False
@@ -115,12 +121,16 @@
 				Label:
 					text: 'Jazyk:'
 				Label:
-					text: ''
-			MojeTlacitko:
-				id: btn_zpet
-				text: 'Zpět bez uložení'
-				on_press: root.manager.current = 'obrazovka_hry'
-			MojeTlacitko:
-				id: btn_uloz
-				text: 'Uložit a zavřít'
-				on_press: root.manager.current = 'obrazovka_hry'
+					id: lb_jazyk
+			BoxLayout:
+				padding: (10,10,10,10) if mrizka.cols > 1 else (0,0,0,0)
+				MojeTlacitko:
+					id: btn_zpet
+					text: 'Zpět bez uložení'
+					on_press: app.stisk_zpet()
+			BoxLayout:
+				padding: (10,10,10,10) if mrizka.cols > 1 else (0,0,0,0)
+				MojeTlacitko:
+					id: btn_uloz
+					text: 'Uložit a zavřít'
+					on_press: app.stisk_uloz()
