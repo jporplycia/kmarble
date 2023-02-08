@@ -51,30 +51,6 @@ def vytvor_pole(sirka_matice):
         pole.append(radek)
     return(pole)
 
-def pridej_kulicky(pole, prirustek, pocet_barev):
-    # přidá kuličky na hrací pole
-    prazdna_mista = 0
-    rozmer = len(pole)
-    # spočítá počet prázdných polí
-    for radek in pole:
-        prazdna_mista += radek.count(0)
-    # pokud je prázdných polí méně než přírůstek tak sníží počet přidaných kuliček na povolené množství a zapne ukazatel zaplnění herního pole
-    if prazdna_mista < prirustek: prirustek = prazdna_mista
-    # vygeneruje pořadí do kterých prázdných polí se kuličky přidají
-    mista = sample(range(0, prazdna_mista), prirustek)
-    mista.sort()
-    # nastaví polím v daném pořadí barvy
-    poradi = 0
-    kulicka = 0
-    for i in range(rozmer):
-        for j in range(rozmer):
-            if pole[i][j] == 0:
-                if poradi == mista[kulicka]:
-                    pole[i][j] = random.randint(1, pocet_barev)
-                    kulicka += 1
-                    if kulicka == prirustek: return(pole)
-                poradi += 1
-
 def nove_kulicky(pole, prirustek, pocet_barev):
     # vrátí seznam nových kuliček
     seznam_kulicek = []
@@ -95,9 +71,10 @@ def nove_kulicky(pole, prirustek, pocet_barev):
         for j in range(rozmer):
             if pole[i][j] == 0:
                 if poradi == mista[kulicka]:
-                    seznam_kulicek.append([i,j,random.randint(1, pocet_barev)])
+                    pole[i][j] = random.randint(1, pocet_barev)
+                    seznam_kulicek.append([i,j])
                     kulicka += 1
-                    if kulicka == prirustek: return(seznam_kulicek)
+                    if kulicka == prirustek: return(pole, seznam_kulicek)
                 poradi += 1
 
 def kontrola(policko,i,j,predchozi,pocet_v_rade,min_rada,smazat_mista,ke_smazani):

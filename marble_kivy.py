@@ -22,13 +22,12 @@ Hra končí v okamžiku, kdy je celé hrací pole obsazené
 
 import marble_funkce, marble_lang
 from kivy.app import App
+from kivy.config import Config
 from kivy.core.window import Window
 from kivy.core.text import LabelBase
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.screenmanager import Screen
-from kivy.graphics import Line, Color
+from kivy.graphics import Color, Line, Ellipse
 from kivy.uix.image import Image
-from kivy.config import Config
+from kivy.uix.screenmanager import Screen
 
 class MarbleApp(App):
     # načtení proměnných
@@ -41,9 +40,12 @@ class MarbleApp(App):
     jazyk = Config.get('settings', 'jazyk')
     texty = marble_lang.nacti_text(jazyk)
     # nastavení dalších proměnných
+    grid_size, zmenseni = 0, 8
+    offset = (0, 0)
+    circles = {}
     cas_posunu, cas_pauzy, rychlost_animace = 50, 500, 50
     body, krok = 0, 0
-    pole, barva, kulicky, pozice_vybrane_kulicky, cil_pozice, cesta, smazat_mista,lines = [], [], [], [], [], [], [], []
+    pole, barva, kulicky, pozice_vybrane_kulicky, cil_pozice, cesta, smazat_mista = [], [], [], [], [], [], []
     hra_bezi, hrac_je_na_tahu, vybrana_kulicka = False, False, False
     
     def build(self):
@@ -60,27 +62,40 @@ class MarbleApp(App):
             self.barva.append(Image(source='images/b' + str(i+1).zfill(2) + '.png'))
     
     def vykresli_herni_pole(self):
+        # POZOR - nereaguje na situaci maximalizace okna a zpět ve windows
         herni_pole = self.root.ids.obrazovka_hry.ids.herni_pole
-        # vymaže původní mřížku, pokud je
-        for line in self.lines:
-            herni_pole.canvas.remove(line)
-        self.lines = []
-        # nakreslí mřížku
+        # vypočte pozice a rozestupy
         width, height = herni_pole.width, herni_pole.height
-        grid_size = int(min(width, height)) // self.sirka_matice 
-        size = grid_size * self.sirka_matice
+        self.grid_size = int(min(width, height)) // self.sirka_matice
+        size = self.grid_size * self.sirka_matice
         x, y = herni_pole.x + (width - size) // 2, herni_pole.y + (height - size) // 2
-        
+        self.offset = (x, y)
+        # vymaže plátno a seznam čar
+        herni_pole.canvas.clear()
+        # nakreslí mřížku a kuličky
         with herni_pole.canvas:
             Color(1, 1, 1, 0.5)
-            for offset in range(0, size + grid_size, grid_size):
-                self.lines.append(Line(points=(x, y + offset, x + size, y + offset)))
-                self.lines.append(Line(points=(x + offset, y, x + offset, y + size)))    
+            for offset in range(0, size + self.grid_size, self.grid_size):
+                Line(points=(x, y + offset, x + size, y + offset))
+                Line(points=(x + offset, y, x + offset, y + size))
+            for x, y in self.circles.keys():
+                self.add_ball(x, y)
+    
+    def remove_ball(self, x, y):
+        circle = self.circles.pop((x, y))
+        self.root.ids.obrazovka_hry.ids.herni_pole.canvas.remove(circle)
+    
+    def add_ball(self, x, y):
+        grid = self.grid_size
+        with self.root.ids.obrazovka_hry.ids.herni_pole.canvas:
+            Color(1,1,1,1)
+            self.circles[(x, y)] = Ellipse(texture=self.barva[self.pole[x][y] - 1].texture, pos=(self.offset[0] + grid * x + self.zmenseni // 2, self.offset[1] + grid * y + self.zmenseni // 2), size=(grid - self.zmenseni, grid - self.zmenseni))
     
     def start_hry(self): # akce při stisku tlačítka start hry
         if self.hra_bezi: # hra probíhá, dojde k jejímu předčasnému ukončení
             self.root.ids.obrazovka_hry.ids.btn_start.text = 'Začni hru'
             self.root.ids.obrazovka_hry.ids.herni_pole.canvas.clear()
+            self.circles = {}
             self.root.ids.obrazovka_hry.ids.btn_nastaveni.disabled = False
             self.hra_bezi = False
         else:   # hra začíná
@@ -97,11 +112,12 @@ class MarbleApp(App):
     def herni_kolo(self):
         self.smazat_mista, pocet_bodu = marble_funkce.zkontroluj_rady(self.pole, self.min_rada, self.zisk)
         if pocet_bodu == 0:
-            nove_kulicky = marble_funkce.nove_kulicky(self.pole, self.prirustek, self.pocet_barev)
-            ###self.prekresli_obraz() - TADY PŘIDÁME FUNKCI VYKRESLENÍ KULIČEK
+            self.pole, nove_kulicky = marble_funkce.nove_kulicky(self.pole, self.prirustek, self.pocet_barev)
+            for kulicka in nove_kulicky:
+                self.add_ball(kulicka[0],kulicka[1])
             self.smazat_mista, pocet_bodu = marble_funkce.zkontroluj_rady(self.pole, self.min_rada, self.zisk)
         self.body += pocet_bodu
-        ###self.lcd.display(self.body)
+        self.root.ids.obrazovka_hry.ids.btn_vysledky.text = str(self.body)
         if len(self.smazat_mista) > 0:
             # smazání řady
             for misto in self.smazat_mista:
@@ -147,6 +163,8 @@ class MarbleApp(App):
         Config.set('settings', 'zisk', self.zisk)
         Config.set('settings', 'jazyk', self.jazyk)
         Config.write()
+
+
 if __name__ == '__main__':
     LabelBase.register(name='Roboto', fn_regular='Roboto-Medium.ttf')
     MarbleApp().run()
