@@ -31,6 +31,15 @@ ScreenManager:
 		Rectangle:
 			pos: self.pos
 			size: self.size
+
+<MyCustomSpinnerOption@SpinnerOption>:
+    background_color: 0.28, 0.42, 0.90, 1
+    color: 1, 1, 1, 1
+	
+<Muj_spinner@Spinner>:
+	option_cls: 'MyCustomSpinnerOption'
+	background_color: 1, 1, 1, 0.2
+	foreground_color: 1, 1, 1, 1
 			
 <ObrazovkaHry@Screen>:
 	Pozadi:
@@ -42,18 +51,15 @@ ScreenManager:
 			MojeTlacitko:
 				id: btn_start
 				markup: True
-				text: 'Začni hru'
-				on_press: app.start_hry()
+				on_press: app.stisk_start()
 			Button:
 				id: btn_vysledky
 				background_normal: 'images/btn.png'
 				background_down: 'images/btn.png'
 				font_size: self.width/10 if self.width/10 < self.height/3 else self.height/3
-				text: 'Výsledek'
 			MojeTlacitko:
 				id: btn_nastaveni
 				markup: True
-				text: 'Nastavení'
 				on_press: app.stisk_nastaveni()
 		BoxLayout:
 			id: herni_pole
@@ -69,48 +75,52 @@ ScreenManager:
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Šířka hracího pole: ' + str(sld_sirka_matice.value)
+					id: lb_sirka_matice
 				Slider:
 					id: sld_sirka_matice
 					min: 5
 					max: 15
 					step: 1
 					orientation: 'horizontal'
+					on_value: app.sld_sirka_matice_change(self, self.value)
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Počet barev: ' + str(sld_pocet_barev.value)
+					id: lb_pocet_barev
 				Slider:
 					id: sld_pocet_barev
 					min: 3
 					max: 11
 					step: 1
 					orientation: 'horizontal'
+					on_value: app.sld_pocet_barev_change(self, self.value)
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Přírůstek kuliček: ' + str(sld_prirustek.value)
+					id: lb_prirustek
 				Slider:
 					id: sld_prirustek
 					min: 3
 					max: 10
 					step: 1
 					orientation: 'horizontal'
+					on_value: app.sld_prirustek_change(self, self.value)
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Délka řady pro smazání: ' + str(sld_min_rada.value)
+					id: lb_min_rada
 				Slider:
 					id: sld_min_rada
 					min: 3
 					max: sld_sirka_matice.value
 					step: 1
 					orientation: 'horizontal'
+					on_value: app.sld_min_rada_change(self, self.value)
 			BoxLayout:
 				padding: int(self.width/25),0,int(self.width/25),0
 				orientation: 'vertical'
 				Label:
-					text: 'Zisk za počet kuliček:'
+					id: lb_zisk
 				TextInput:
 					id: ti_zisk
 					size_hint: 1, None
@@ -119,18 +129,16 @@ ScreenManager:
 			BoxLayout:
 				orientation: 'vertical'
 				Label:
-					text: 'Jazyk:'
-				Label:
 					id: lb_jazyk
+				Muj_spinner:
+					id: sp_jazyk
 			BoxLayout:
 				padding: (10,10,10,10) if mrizka.cols > 1 else (0,0,0,0)
 				MojeTlacitko:
 					id: btn_zpet
-					text: 'Zpět bez uložení'
 					on_press: app.stisk_zpet()
 			BoxLayout:
 				padding: (10,10,10,10) if mrizka.cols > 1 else (0,0,0,0)
 				MojeTlacitko:
 					id: btn_uloz
-					text: 'Uložit a zavřít'
 					on_press: app.stisk_uloz()
