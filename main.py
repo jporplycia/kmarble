@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+﻿#!/usr/bin/python3
 #############################
 # Modul: marble_kivy.py
 # Autor: Jaroslav Porplycia
@@ -17,7 +17,9 @@ Hra končí v okamžiku, kdy je celé hrací pole obsazené
 # # 2023/01/26 JP - načtení proměnných
 # # 2023/02/09 JP - postupné seznamování s kivy a přebudování původního kódu do nové aplikace
 # # 2023/02/14 JP - zprovoznění hry, zvuky, jazykové mutace
-# # CO DODĚLAT: nefunguje překreslení při maximalizaci a minimalizaci okna
+# # 2023/02/21 JP - ošetření neexistence souboru config.ini
+# # 2023/02/22 JP - změna ukládání dat, nyní se ukládají do souboru data.json
+# # CO DODĚLAT: nefunguje překreslení při maximalizaci a minimalizaci okna, ani při otočení v androidu
 ################################
 # File name: marble_kivy.app
 #:kivy 2.1.0
@@ -33,17 +35,11 @@ from kivy.graphics import Color, Line, Ellipse, Rectangle
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen
-
+from kivy.utils import platform
 
 class MarbleApp(App):
     # načtení proměnných
-    Config.read('config.ini')
-    sirka_matice = int(Config.get('settings', 'sirka_matice'))
-    pocet_barev = int(Config.get('settings', 'pocet_barev'))
-    prirustek = int(Config.get('settings', 'prirustek'))
-    min_rada = int(Config.get('settings', 'min_rada'))
-    zisk = Config.get('settings', 'zisk')
-    jazyk = Config.get('settings', 'jazyk')
+    sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk = marble_funkce.nacti_data()
     # nastavení dalších proměnných
     texty = marble_lang.nacti_text(jazyk)
     grid_size, zmenseni = 0, 8
@@ -52,11 +48,11 @@ class MarbleApp(App):
     cas_posunu, cas_pauzy, cas_zmizeni = 0.05, 0.5, 0.05
     body, krok = 0, 0
     animace, barva, cesta, cil, cil_pozice, kulicky, platno, pole, pozice_vybrane_kulicky, smazat_mista, vyber, zvuky = None, None, None, None, None, None, None, None, None, None, None, None
-    hra_bezi, hrac_je_na_tahu, vybrana_kulicka, byla_hra = False, False, False, False
+    hra_bezi, hrac_je_na_tahu, je_vybrana_kulicka, byla_hra = False, False, False, False
     
     def build(self):
         #Window.bind(size=self.vykresli_herni_pole)
-        Window.bind(width=self.vykresli_herni_pole, height=self.vykresli_herni_pole, size=self.vykresli_herni_pole)
+        Window.bind(on_resize=self.vykresli_herni_pole)
         self.root.ids.obrazovka_hry.ids.herni_pole.bind(on_touch_down=self.stisk_vyber_kulicky)
         self.barva = []
         for i in range(self.pocet_barev+1):
@@ -237,13 +233,7 @@ class MarbleApp(App):
         self.min_rada = self.root.ids.obrazovka_nastaveni.ids.sld_min_rada.value
         self.zisk = self.root.ids.obrazovka_nastaveni.ids.ti_zisk.text
         self.jazyk = self.root.ids.obrazovka_nastaveni.ids.sp_jazyk.text
-        Config.set('settings', 'sirka_matice', self.sirka_matice)
-        Config.set('settings', 'pocet_barev', self.pocet_barev)
-        Config.set('settings', 'prirustek', self.prirustek)
-        Config.set('settings', 'min_rada', self.min_rada)
-        Config.set('settings', 'zisk', self.zisk)
-        Config.set('settings', 'jazyk', self.jazyk)
-        Config.write()
+        marble_funkce.uloz_data(self.sirka_matice, self.pocet_barev, self.prirustek, self.min_rada, self.zisk, self.jazyk)
         self.nastav_texty()
         self.root.current = 'ObrazovkaHry'
     
@@ -263,13 +253,13 @@ class MarbleApp(App):
                 # výpočet kam se kliklo
                 i, j = int((x - self.offset[0])/grid), int((y - self.offset[1])/grid)
                 self.hrac_je_na_tahu = False
-                if self.vybrana_kulicka: # je vybraná kulička, kterou chceme přesunout, nyní vybíráme kam
+                if self.je_vybrana_kulicka: # je vybraná kulička, kterou chceme přesunout, nyní vybíráme kam
                     if self.pole[i][j] > 0:
                         # změna výběru kuličky, původní dej zpět, označ novou
                         self.zvuky[0].play()
                         self.platno.remove(self.vyber)
                         self.pozice_vybrane_kulicky = [i, j]
-                        self.vybrana_kulicka = True
+                        self.je_vybrana_kulicka = True
                         self.remove_ball(i, j)
                         self.add_ball(i, j, True)
                         self.hrac_je_na_tahu = True
@@ -280,7 +270,7 @@ class MarbleApp(App):
                             Color(1,1,1,1)
                             self.cil = Rectangle(texture=self.barva[0].texture, pos=(self.offset[0] + grid * i, self.offset[1] + grid * j), size=(grid, grid))
                         je_cesta, self.cesta = marble_funkce.najdi_cestu(self.pole, self.pozice_vybrane_kulicky, self.cil_pozice)
-                        self.vybrana_kulicka = False
+                        self.je_vybrana_kulicka = False
                         if je_cesta:
                             self.pole[self.cesta[-1][0]][self.cesta[-1][1]] = self.pole[self.cesta[0][0]][self.cesta[0][1]]
                             self.pole[self.cesta[0][0]][self.cesta[0][1]] = 0
@@ -294,7 +284,7 @@ class MarbleApp(App):
                     if self.pole[i][j] > 0: # klikli jsme na kuličku?
                         self.pozice_vybrane_kulicky = [i, j]
                         self.zvuky[0].play()
-                        self.vybrana_kulicka = True
+                        self.je_vybrana_kulicka = True
                         self.remove_ball(i, j)
                         self.add_ball(i, j, True)
                     self.hrac_je_na_tahu = True

@@ -22,7 +22,7 @@ ScreenManager:
 	background_normal: 'images/btn.png'
 	background_down: 'images/btn_dwn.png'
 	background_disabled_normal: 'images/btn.png'
-	font_size: self.width/10 if self.width/10 < self.height/3 else self.height/3
+	font_size: self.width/12 if self.width/12 < self.height/3 else self.height/3
 	
 <Pozadi@BoxLayout>:
 	canvas:
@@ -43,11 +43,11 @@ ScreenManager:
 			
 <ObrazovkaHry@Screen>:
 	Pozadi:
-		orientation: 'vertical'  #if root.width < root.height else 'horizontal'
+		orientation: 'vertical'
 		padding: int(self.width/25),int(self.height/25),int(self.width/25),int(self.height/25)
 		BoxLayout:
-			orientation: 'horizontal'  #if root.width < root.height else 'vertical'
-			size_hint_y: root.width/root.height/5
+			orientation: 'horizontal'    if root.width > root.height/1.5 else 'vertical'
+			size_hint_y: root.height/3/root.width
 			MojeTlacitko:
 				id: btn_start
 				markup: True

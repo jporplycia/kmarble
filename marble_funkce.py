@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+﻿#!/usr/bin/python3
 #############################
 # Modul: marble_funkce.py
 # Autor: Jaroslav Porplycia
@@ -36,10 +36,37 @@ možnost hrát na různých platformách (windows, linux, apple, webovky, androi
 # # 2022/12/15 JP - úprava funkce načti text
 # # 2022/12/16 JP - vytvoření funkce nacti_jazyky
 # # 2023/01/26 JP - pro účely využití funkcí v kivy zručení funkcí pro načtení dat a jazyků - přesun do souboru marble_data.py
+# # 2023/02/22 JP - opětovné přidání funkcí nacti_data a uloz_data
 ################################
 
 from random import sample
 import random
+from kivy.storage.jsonstore import JsonStore
+
+def nacti_data():
+    store = JsonStore('data.json')
+    if not store.exists('data'):
+        store.put('data', sirka_matice=8, pocet_barev=8, prirustek=3, min_rada=5, zisk='1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120', jazyk='česky')
+    data = store.get('data')
+    sirka_matice = int(data.get('sirka_matice', 8))
+    pocet_barev = int(data.get('pocet_barev', 8))
+    prirustek = int(data.get('prirustek', 3))
+    min_rada = int(data.get('min_rada', 5))
+    zisk = data.get('zisk', '1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120')
+    jazyk = (data.get('jazyk', 'česky'))
+    return sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk
+
+def uloz_data(sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk):
+    store = JsonStore('data.json')
+    data = {
+        'sirka_matice': sirka_matice,
+        'pocet_barev': pocet_barev,
+        'prirustek': prirustek,
+        'min_rada': min_rada,
+        'zisk': zisk,
+        'jazyk': jazyk
+    }
+    store.put('data', **data)
 
 def vytvor_pole(sirka_matice):
     # vytvoří pole a nastaví všem polím hodnotu 0
