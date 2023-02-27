@@ -44,7 +44,7 @@ ScreenManager:
 <ObrazovkaHry@Screen>:
 	Pozadi:
 		orientation: 'vertical'
-		padding: int(self.width/25),int(self.height/25),int(self.width/25),int(self.height/25)
+		#padding: int(self.width/25),int(self.height/25),int(self.width/25),int(self.height/25)
 		BoxLayout:
 			orientation: 'horizontal'    if root.width > root.height/1.5 else 'vertical'
 			size_hint_y: root.height/3/root.width
@@ -57,12 +57,14 @@ ScreenManager:
 				background_normal: 'images/btn.png'
 				background_down: 'images/btn.png'
 				font_size: self.width/10 if self.width/10 < self.height/3 else self.height/3
+		BoxLayout:
+			id: herni_pole
+		BoxLayout:
+			size_hint_y: root.height/3/root.width
 			MojeTlacitko:
 				id: btn_nastaveni
 				markup: True
 				on_press: app.stisk_nastaveni()
-		BoxLayout:
-			id: herni_pole
 
 <ObrazovkaNastaveni@Screen>:
 	Pozadi:

@@ -46,7 +46,7 @@ from kivy.storage.jsonstore import JsonStore
 def nacti_data():
     store = JsonStore('data.json')
     if not store.exists('data'):
-        store.put('data', sirka_matice=8, pocet_barev=8, prirustek=3, min_rada=5, zisk='1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120', jazyk='česky')
+        store.put('data', sirka_matice=8, pocet_barev=8, prirustek=3, min_rada=5, zisk='1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120', jazyk='česky', zvuk =1)
     data = store.get('data')
     sirka_matice = int(data.get('sirka_matice', 8))
     pocet_barev = int(data.get('pocet_barev', 8))
@@ -54,9 +54,10 @@ def nacti_data():
     min_rada = int(data.get('min_rada', 5))
     zisk = data.get('zisk', '1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120')
     jazyk = (data.get('jazyk', 'česky'))
-    return sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk
+    zvuk = int(data.get('zvuk', 1))
+    return sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk, zvuk
 
-def uloz_data(sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk):
+def uloz_data(sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk, zvuk):
     store = JsonStore('data.json')
     data = {
         'sirka_matice': sirka_matice,
@@ -64,7 +65,8 @@ def uloz_data(sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk):
         'prirustek': prirustek,
         'min_rada': min_rada,
         'zisk': zisk,
-        'jazyk': jazyk
+        'jazyk': jazyk,
+        'zvuk': zvuk
     }
     store.put('data', **data)
 

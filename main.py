@@ -3,7 +3,7 @@
 # Modul: marble_kivy.py
 # Autor: Jaroslav Porplycia
 # Datum: 2023/01/26
-# Verze: 0.01
+# Verze: 0.02
 '''
 Hra na čtvercové desce o několika polích
 V každém kole přibude několik kuliček několika barev
@@ -18,8 +18,8 @@ Hra končí v okamžiku, kdy je celé hrací pole obsazené
 # # 2023/02/09 JP - postupné seznamování s kivy a přebudování původního kódu do nové aplikace
 # # 2023/02/14 JP - zprovoznění hry, zvuky, jazykové mutace
 # # 2023/02/21 JP - ošetření neexistence souboru config.ini
-# # 2023/02/22 JP - změna ukládání dat, nyní se ukládají do souboru data.json
-# # CO DODĚLAT: nefunguje překreslení při maximalizaci a minimalizaci okna, ani při otočení v androidu
+# # 2023/02/22 JP - změna ukládání dat, nyní se ukládají do souboru data.json - vše funkční, aplikace na androidu jede
+# # 2023/02/27 JP - začátek práce na verzi 0.02 - Požadavky - překreslení vlastním testem změny pomocí časovače (hotovo), změna vzhledu, přidání vypnutí a zapnutí zvuku
 ################################
 # File name: marble_kivy.app
 #:kivy 2.1.0
@@ -39,21 +39,19 @@ from kivy.utils import platform
 
 class MarbleApp(App):
     # načtení proměnných
-    sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk = marble_funkce.nacti_data()
+    sirka_matice, pocet_barev, prirustek, min_rada, zisk, jazyk, zvuk = marble_funkce.nacti_data()
     # nastavení dalších proměnných
     texty = marble_lang.nacti_text(jazyk)
-    grid_size, zmenseni = 0, 8
+    grid_size, zmenseni, old_width, old_height = 0, 8, 0, 0
     offset = (0, 0)
     circles = {}
-    cas_posunu, cas_pauzy, cas_zmizeni = 0.05, 0.5, 0.05
+    cas_posunu, cas_pauzy, cas_zmizeni, cas_testu_zmeny_velikosti = 0.05, 0.5, 0.05, 0.1
     body, krok = 0, 0
-    animace, barva, cesta, cil, cil_pozice, kulicky, platno, pole, pozice_vybrane_kulicky, smazat_mista, vyber, zvuky = None, None, None, None, None, None, None, None, None, None, None, None
+    animace, barva, cesta, cil, cil_pozice, kulicky, pole, pozice_vybrane_kulicky, smazat_mista, test_zmeny_velikosti, vyber, zvuky = None, None, None, None, None, None, None, None, None, None, None, None
+    hp, platno = None, None
     hra_bezi, hrac_je_na_tahu, je_vybrana_kulicka, byla_hra = False, False, False, False
     
     def build(self):
-        #Window.bind(size=self.vykresli_herni_pole)
-        Window.bind(on_resize=self.vykresli_herni_pole)
-        self.root.ids.obrazovka_hry.ids.herni_pole.bind(on_touch_down=self.stisk_vyber_kulicky)
         self.barva = []
         for i in range(self.pocet_barev+1):
             self.barva.append(Image(source='images/b' + str(i).zfill(2) + '.png'))
@@ -62,24 +60,34 @@ class MarbleApp(App):
                       SoundLoader.load('sounds/03.wav'),\
                       SoundLoader.load('sounds/04.wav'),\
                       SoundLoader.load('sounds/05.wav')]
-        self.platno = self.root.ids.obrazovka_hry.ids.herni_pole.canvas
+        self.hra = self.root.ids.obrazovka_hry.ids
+        self.hp = self.hra.herni_pole
+        self.platno = self.hp.canvas
+        self.nastaveni = self.root.ids.obrazovka_nastaveni.ids
+        self.hp.bind(on_touch_down=self.stisk_vyber_kulicky)
         self.nastav_texty()
+        self.test_zmeny_velikosti = Clock.schedule_interval(self.je_zmena_velikosti, self.cas_testu_zmeny_velikosti)
     
     def nastav_texty(self):
         self.texty = marble_lang.nacti_text(self.jazyk)
-        self.root.ids.obrazovka_hry.ids.btn_start.text = self.texty[0]
-        self.root.ids.obrazovka_hry.ids.btn_nastaveni.text = self.texty[2]
-        self.root.ids.obrazovka_hry.ids.btn_vysledky.text = str(self.body)
+        self.hra.btn_start.text = self.texty[0]
+        self.hra.btn_nastaveni.text = self.texty[2]
+        self.hra.btn_vysledky.text = str(self.body)
     
+    def je_zmena_velikosti(self, dt):
+        # zkontroluje, zda se změnila velikost okna, pokud ano, tak je překreslí
+        if self.old_height != self.hp.height or self.old_width != self.hp.width:
+            self.vykresli_herni_pole()
+            self.old_height, self.old_width = self.hp.height, self.hp.width
+
     def vykresli_herni_pole(self, *args):
         # POZOR - nereaguje na situaci maximalizace okna a zpět ve windows
         if self.hra_bezi:
-            hp = self.root.ids.obrazovka_hry.ids.herni_pole
             # vypočte pozice a rozestupy
-            width, height = hp.width, hp.height
+            width, height = self.hp.width, self.hp.height
             self.grid_size = int(min(width, height)) // self.sirka_matice
             size = self.grid_size * self.sirka_matice
-            x, y = hp.x + (width - size) // 2, hp.y + (height - size) // 2
+            x, y = self.hp.x + (width - size) // 2, self.hp.y + (height - size) // 2
             self.offset = (x, y)
             # vymaže plátno a seznam čar
             self.platno.clear()
@@ -115,7 +123,7 @@ class MarbleApp(App):
         # Oznámení konce hry a dosaženého počtu bodů
         self.platno.clear()
         with self.platno:
-            Label(text=self.texty[3] + str(self.body), font_size='24sp', halign='center', center=self.root.ids.obrazovka_hry.ids.herni_pole.center)
+            Label(text=self.texty[3] + str(self.body), font_size='24sp', halign='center', center=self.hp.center)
     
     def smaz_vybery(self, dt):
         self.platno.remove(self.vyber)
@@ -134,12 +142,13 @@ class MarbleApp(App):
     
     def animuj(self, dt):
         # přesun kuličky do cíle
-        self.zvuky[1].play()
+        if self.zvuk:
+            self.zvuky[1].play()
         self.remove_ball(self.cesta[self.krok][0],self.cesta[self.krok][1])
         self.add_ball(self.cesta[self.krok+1][0],self.cesta[self.krok+1][1])
         self.krok += 1
         if self.krok > len(self.cesta)-2:
-            self.root.ids.obrazovka_hry.ids.herni_pole.canvas.remove(self.cil)
+            self.platno.remove(self.cil)
             self.animace.cancel()
             self.vyber, self.cil = None, None
             self.herni_kolo()
@@ -153,87 +162,91 @@ class MarbleApp(App):
                 self.add_ball(kulicka[0],kulicka[1])
             self.smazat_mista, pocet_bodu = marble_funkce.zkontroluj_rady(self.pole, self.min_rada, zisk)
         self.body += pocet_bodu
-        self.root.ids.obrazovka_hry.ids.btn_vysledky.text = str(self.body)
+        self.hra.btn_vysledky.text = str(self.body)
         if len(self.smazat_mista) > 0:
             # smazání řady
             for misto in self.smazat_mista:
                 self.pole[misto[0]][misto[1]] = 0
             self.krok = 0
-            self.zvuky[2].play()
+            if self.zvuk:
+                self.zvuky[2].play()
             self.animace = Clock.schedule_interval(self.animuj_zmizeni, self.cas_zmizeni)
         else:
             # pokud se pole zaplnilo, ukonči hru
             if marble_funkce.je_pole_plne(self.pole):
                 self.hra_bezi = False
-                self.root.ids.obrazovka_hry.ids.btn_start.text = self.texty[0]
+                self.hra.btn_start.text = self.texty[0]
                 self.platno.clear()
                 self.circles = {}
-                self.root.ids.obrazovka_hry.ids.btn_nastaveni.disabled = False
+                self.hra.btn_nastaveni.disabled = False
                 self.byla_hra = True
-                self.zvuky[3].play()
+                if self.zvuk:
+                    self.zvuky[3].play()
                 self.oznam_konec()
             else:
                 self.hrac_je_na_tahu = True
     
     def sld_sirka_matice_change(self, instance, value):
-        self.root.ids.obrazovka_nastaveni.ids.lb_sirka_matice.text = self.texty[4] + str(value)
+        self.nastaveni.lb_sirka_matice.text = self.texty[4] + str(value)
     
     def sld_pocet_barev_change(self, instance, value):
-        self.root.ids.obrazovka_nastaveni.ids.lb_pocet_barev.text = self.texty[5] + str(value)
+        self.nastaveni.lb_pocet_barev.text = self.texty[5] + str(value)
     
     def sld_prirustek_change(self, instance, value):
-        self.root.ids.obrazovka_nastaveni.ids.lb_prirustek.text = self.texty[6] + str(value)
+        self.nastaveni.lb_prirustek.text = self.texty[6] + str(value)
     
     def sld_min_rada_change(self, instance, value):
-        self.root.ids.obrazovka_nastaveni.ids.lb_min_rada.text = self.texty[7] + str(value)
+        self.nastaveni.lb_min_rada.text = self.texty[7] + str(value)
     
     def stisk_start(self): # akce při stisku tlačítka start hry
         if self.hra_bezi: # hra probíhá, dojde k jejímu předčasnému ukončení
-            self.root.ids.obrazovka_hry.ids.btn_start.text = self.texty[0]
+            self.hra.btn_start.text = self.texty[0]
             self.platno.clear()
             self.circles = {}
-            self.root.ids.obrazovka_hry.ids.btn_nastaveni.disabled = False
+            self.hra.btn_nastaveni.disabled = False
             self.hra_bezi = False
             self.byla_hra = True
             self.vyber, self.cil = None, None
-            self.zvuky[3].play()
+            if self.zvuk:
+                self.zvuky[3].play()
             self.oznam_konec()
         else:   # hra začíná
             self.body = 0
-            self.root.ids.obrazovka_hry.ids.btn_vysledky.text = str(self.body)
-            self.root.ids.obrazovka_hry.ids.btn_start.text = self.texty[1]
-            self.root.ids.obrazovka_hry.ids.btn_nastaveni.disabled = True
+            self.hra.btn_vysledky.text = str(self.body)
+            self.hra.btn_start.text = self.texty[1]
+            self.hra.btn_nastaveni.disabled = True
             self.pole = marble_funkce.vytvor_pole(self.sirka_matice) # vytvoření herního pole
             self.hra_bezi = True
             self.vykresli_herni_pole() # smaže herní pole a nakreslí čáry
+            self.old_height, self.old_width = self.hp.width, self.hp.height
             self.herni_kolo()
     
     def stisk_nastaveni(self):
-        self.root.ids.obrazovka_nastaveni.ids.lb_sirka_matice.text = self.texty[4] + str(self.sirka_matice)
-        self.root.ids.obrazovka_nastaveni.ids.lb_pocet_barev.text = self.texty[5] + str(self.pocet_barev)
-        self.root.ids.obrazovka_nastaveni.ids.lb_prirustek.text = self.texty[6] + str(self.prirustek)
-        self.root.ids.obrazovka_nastaveni.ids.lb_min_rada.text = self.texty[7] + str(self.min_rada)
-        self.root.ids.obrazovka_nastaveni.ids.lb_zisk.text = self.texty[8]
-        self.root.ids.obrazovka_nastaveni.ids.lb_jazyk.text = self.texty[9]
-        self.root.ids.obrazovka_nastaveni.ids.btn_uloz.text = self.texty[10]
-        self.root.ids.obrazovka_nastaveni.ids.btn_zpet.text = self.texty[11]
-        self.root.ids.obrazovka_nastaveni.ids.sld_sirka_matice.value = self.sirka_matice
-        self.root.ids.obrazovka_nastaveni.ids.sld_pocet_barev.value = self.pocet_barev
-        self.root.ids.obrazovka_nastaveni.ids.sld_prirustek.value = self.prirustek
-        self.root.ids.obrazovka_nastaveni.ids.sld_min_rada.value = self.min_rada
-        self.root.ids.obrazovka_nastaveni.ids.ti_zisk.text = self.zisk
-        self.root.ids.obrazovka_nastaveni.ids.sp_jazyk.text = self.jazyk
-        self.root.ids.obrazovka_nastaveni.ids.sp_jazyk.values = marble_lang.jazyky()
+        self.nastaveni.lb_sirka_matice.text = self.texty[4] + str(self.sirka_matice)
+        self.nastaveni.lb_pocet_barev.text = self.texty[5] + str(self.pocet_barev)
+        self.nastaveni.lb_prirustek.text = self.texty[6] + str(self.prirustek)
+        self.nastaveni.lb_min_rada.text = self.texty[7] + str(self.min_rada)
+        self.nastaveni.lb_zisk.text = self.texty[8]
+        self.nastaveni.lb_jazyk.text = self.texty[9]
+        self.nastaveni.btn_uloz.text = self.texty[10]
+        self.nastaveni.btn_zpet.text = self.texty[11]
+        self.nastaveni.sld_sirka_matice.value = self.sirka_matice
+        self.nastaveni.sld_pocet_barev.value = self.pocet_barev
+        self.nastaveni.sld_prirustek.value = self.prirustek
+        self.nastaveni.sld_min_rada.value = self.min_rada
+        self.nastaveni.ti_zisk.text = self.zisk
+        self.nastaveni.sp_jazyk.text = self.jazyk
+        self.nastaveni.sp_jazyk.values = marble_lang.jazyky()
         self.root.current = 'ObrazovkaNastaveni'
     
     def stisk_uloz(self):
-        self.sirka_matice = self.root.ids.obrazovka_nastaveni.ids.sld_sirka_matice.value
-        self.pocet_barev = self.root.ids.obrazovka_nastaveni.ids.sld_pocet_barev.value
-        self.prirustek = self.root.ids.obrazovka_nastaveni.ids.sld_prirustek.value
-        self.min_rada = self.root.ids.obrazovka_nastaveni.ids.sld_min_rada.value
-        self.zisk = self.root.ids.obrazovka_nastaveni.ids.ti_zisk.text
-        self.jazyk = self.root.ids.obrazovka_nastaveni.ids.sp_jazyk.text
-        marble_funkce.uloz_data(self.sirka_matice, self.pocet_barev, self.prirustek, self.min_rada, self.zisk, self.jazyk)
+        self.sirka_matice = self.nastaveni.sld_sirka_matice.value
+        self.pocet_barev = self.nastaveni.sld_pocet_barev.value
+        self.prirustek = self.nastaveni.sld_prirustek.value
+        self.min_rada = self.nastaveni.sld_min_rada.value
+        self.zisk = self.nastaveni.ti_zisk.text
+        self.jazyk = self.nastaveni.sp_jazyk.text
+        marble_funkce.uloz_data(self.sirka_matice, self.pocet_barev, self.prirustek, self.min_rada, self.zisk, self.jazyk, self.zvuk)
         self.nastav_texty()
         self.root.current = 'ObrazovkaHry'
     
@@ -256,7 +269,8 @@ class MarbleApp(App):
                 if self.je_vybrana_kulicka: # je vybraná kulička, kterou chceme přesunout, nyní vybíráme kam
                     if self.pole[i][j] > 0:
                         # změna výběru kuličky, původní dej zpět, označ novou
-                        self.zvuky[0].play()
+                        if self.zvuk:
+                            self.zvuky[0].play()
                         self.platno.remove(self.vyber)
                         self.pozice_vybrane_kulicky = [i, j]
                         self.je_vybrana_kulicka = True
@@ -278,12 +292,14 @@ class MarbleApp(App):
                             self.platno.remove(self.vyber)
                             self.animace = Clock.schedule_interval(self.animuj, self.cas_posunu)
                         else: # cesta nenalezena
-                            self.zvuky[4].play()
+                            if self.zvuk:
+                                self.zvuky[4].play()
                             Clock.schedule_once(self.smaz_vybery, self.cas_pauzy)
                 else: # vybíráme kuličku, kterou chceme přesunout
                     if self.pole[i][j] > 0: # klikli jsme na kuličku?
                         self.pozice_vybrane_kulicky = [i, j]
-                        self.zvuky[0].play()
+                        if self.zvuk:
+                            self.zvuky[0].play()
                         self.je_vybrana_kulicka = True
                         self.remove_ball(i, j)
                         self.add_ball(i, j, True)
